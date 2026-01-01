@@ -16,12 +16,27 @@ class NetworkManager {
     
     private init() {}
     
-    enum NetworkError: Error {
+    enum NetworkError: LocalizedError {
         case invalidURL
         case imageConversionFailed
         case invalidResponse
         case serverError(statusCode: Int)
         case decodingError(Error)
+        
+        var errorDescription: String? {
+            switch self {
+            case .invalidURL:
+                return "Invalid URL configuration."
+            case .imageConversionFailed:
+                return "Failed to process image for upload."
+            case .invalidResponse:
+                return "Invalid response from server."
+            case .serverError(let statusCode):
+                return "Server returned error status: \(statusCode)"
+            case .decodingError(let error):
+                return "Failed to parse menu data: \(error.localizedDescription)"
+            }
+        }
     }
     
     func uploadImage(_ image: UIImage) async throws -> Menu {
@@ -48,21 +63,41 @@ class NetworkManager {
             throw NetworkError.serverError(statusCode: httpResponse.statusCode)
         }
         
+        // Debug: Print raw response
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("Received JSON: \(responseString)")
+        }
+        
         do {
             let decoder = JSONDecoder()
-            // Decode as an array of N8nResponse
-            let responseArray = try decoder.decode([N8nResponse].self, from: data)
             
-            if let firstItem = responseArray.first {
-                return firstItem.output.menu
-            } else {
-                throw NetworkError.invalidResponse
+            // Strategy 1: Try decoding Menu directly (matches latest logs)
+            if let directMenu = try? decoder.decode(Menu.self, from: data) {
+                return directMenu
             }
+            
+            // Strategy 2: N8n Array format
+            if let responseArray = try? decoder.decode([N8nResponse].self, from: data),
+               let firstItem = responseArray.first {
+                return firstItem.output.menu
+            }
+            
+            // Strategy 3: Legacy wrapped MenuResponse
+            if let menuResponse = try? decoder.decode(MenuResponse.self, from: data) {
+                return menuResponse.menu
+            }
+            
+            // If all fail, throw the original decoding error by forcing a decode that we know will fail 
+            // but capturing the error, or just throw invalidResponse. 
+            // Better: just try one last time with logging to throw the detailed error
+            let _ = try decoder.decode(Menu.self, from: data)
+            throw NetworkError.invalidResponse // Should be unreachable if the line above throws
+            
         } catch {
             print("Decoding error: \(error)")
             // Print response string for debugging if decoding fails
             if let responseString = String(data: data, encoding: .utf8) {
-                print("Response received: \(responseString)")
+                print("Response received (failed to decode): \(responseString)")
             }
             throw NetworkError.decodingError(error)
         }

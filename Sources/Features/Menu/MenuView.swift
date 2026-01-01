@@ -39,9 +39,14 @@ struct MenuView: View {
         .navigationTitle("Menu")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Scan New Menu") {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
                     onDismiss()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
                 }
             }
         }
