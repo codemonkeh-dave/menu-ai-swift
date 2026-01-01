@@ -1,6 +1,14 @@
 import Foundation
 
 // MARK: - Menu Response
+struct N8nResponse: Codable {
+    let output: N8nOutput
+}
+
+struct N8nOutput: Codable {
+    let menu: Menu
+}
+
 struct MenuResponse: Codable {
     let menu: Menu
 }

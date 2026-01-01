@@ -7,6 +7,13 @@ class NetworkManager {
     // REPLACE THIS WITH YOUR ACTUAL API ENDPOINT
     private let uploadURL = URL(string: "https://n8n.99bugs.org/webhook/ab33378c-60e2-4cf7-a9c6-0e8e58c928ab")!
     
+    private lazy var session: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 60
+        configuration.timeoutIntervalForResource = 300 // 5 minutes for resource
+        return URLSession(configuration: configuration)
+    }()
+    
     private init() {}
     
     enum NetworkError: Error {
@@ -31,7 +38,7 @@ class NetworkManager {
         let body = createBody(with: imageData, boundary: boundary, filename: "menu_image.jpg")
         request.httpBody = body
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
@@ -43,8 +50,14 @@ class NetworkManager {
         
         do {
             let decoder = JSONDecoder()
-            let menuResponse = try decoder.decode(MenuResponse.self, from: data)
-            return menuResponse.menu
+            // Decode as an array of N8nResponse
+            let responseArray = try decoder.decode([N8nResponse].self, from: data)
+            
+            if let firstItem = responseArray.first {
+                return firstItem.output.menu
+            } else {
+                throw NetworkError.invalidResponse
+            }
         } catch {
             print("Decoding error: \(error)")
             // Print response string for debugging if decoding fails

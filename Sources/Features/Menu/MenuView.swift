@@ -2,42 +2,48 @@ import SwiftUI
 
 struct MenuView: View {
     let menu: Menu
+    let onDismiss: () -> Void
     
     var body: some View {
-        NavigationView {
-            List {
-                if let restaurantName = menu.restaurantName {
-                    Text(restaurantName)
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .accessibilityAddTraits(.isHeader)
-                        .listRowSeparator(.hidden)
-                }
-                
-                ForEach(menu.sections) { section in
-                    Section(header: Text(section.categoryName).font(.title2).bold()) {
-                        if let description = section.description {
-                            Text(description)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .accessibilityLabel("Section description: \(description)")
-                        }
-                        
-                        if let styles = section.availableStyles {
-                            Text("Available Styles: \(styles.joined(separator: ", "))")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        ForEach(section.items) { item in
-                            MenuItemRow(item: item, currency: menu.currency)
-                        }
+        List {
+            if let restaurantName = menu.restaurantName {
+                Text(restaurantName)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .accessibilityAddTraits(.isHeader)
+                    .listRowSeparator(.hidden)
+            }
+            
+            ForEach(menu.sections) { section in
+                Section(header: Text(section.categoryName).font(.title2).bold()) {
+                    if let description = section.description {
+                        Text(description)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .accessibilityLabel("Section description: \(description)")
+                    }
+                    
+                    if let styles = section.availableStyles {
+                        Text("Available Styles: \(styles.joined(separator: ", "))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    ForEach(section.items) { item in
+                        MenuItemRow(item: item, currency: menu.currency)
                     }
                 }
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Menu")
-            .navigationBarTitleDisplayMode(.inline)
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Menu")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Scan New Menu") {
+                    onDismiss()
+                }
+            }
         }
     }
 }
